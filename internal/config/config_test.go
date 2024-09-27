@@ -24,7 +24,7 @@ func TestLoadConfig(t *testing.T) {
 		name           string
 		env            string
 		content        string
-		expectedConfig cfg.Config
+		expectedConfig cfg.ConfigYaml
 		expectError    bool
 	}{{name: "Local case",
 		env: "local",
@@ -43,7 +43,7 @@ database:
   name: "todolist"
   ssl_mode: "disable"
   `,
-		expectedConfig: cfg.Config{
+		expectedConfig: cfg.ConfigYaml{
 			Env: "local",
 			Server: cfg.Server{
 				Host:        "localhost",
@@ -79,7 +79,7 @@ database:
   name: "test"
   ssl_mode: "disable"
 `,
-		expectedConfig: cfg.Config{
+		expectedConfig: cfg.ConfigYaml{
 			Env: "test",
 			Server: cfg.Server{
 				Host:        "localhost",
@@ -114,7 +114,7 @@ database:
   port: "5432"
   name: "todolist"
   ssl_mode: "disable"
-  `, expectedConfig: cfg.Config{
+  `, expectedConfig: cfg.ConfigYaml{
 				Env: "local",
 				Server: cfg.Server{
 					Host:        "localhost",
@@ -158,7 +158,7 @@ database:
 			if config == nil {
 				t.Fatalf("configuration is nil")
 			}
-			if *config != test.expectedConfig {
+			if *&config.ConfigYaml != test.expectedConfig {
 				t.Errorf("expected %v got %v", test.expectedConfig, *config)
 			}
 

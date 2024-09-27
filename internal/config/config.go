@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,10 +14,20 @@ import (
 )
 
 type Config struct {
-	Env        string   `yaml:"env"`
-	Server     Server   `yaml:"server"`
-	Database   Database `yaml:"database"`
-	configPath string   `env:"CONFIG_PATH"`
+	ConfigYaml ConfigYaml
+	ConfigEnv  ConfigEnv
+}
+
+type ConfigEnv struct {
+	env        string `env:"MY_ENV"`
+	configPath string `env:"CONFIG_PATH"`
+	SecretJWT  string `env:"JWT_SECRET"`
+}
+
+type ConfigYaml struct {
+	Env      string   `yaml:"env"`
+	Server   Server   `yaml:"server"`
+	Database Database `yaml:"database"`
 }
 
 type Server struct {
@@ -44,10 +53,16 @@ func LoadConfig() (*Config, error) {
 			log.Fatalf("Error loading .env file %v", err)
 		}
 	}
+	var cfgYaml ConfigYaml
 
 	configPath := os.Getenv("CONFIG_PATH")
 	env := os.Getenv("MY_ENV")
-	fmt.Println(configPath)
+	jwtSecret := os.Getenv("JWT_SECRET")
+
+	cfgEnv := ConfigEnv{
+		SecretJWT: jwtSecret,
+	}
+
 	if configPath == "" {
 		log.Fatalf("CONFIG_PATH environment variable not set")
 	}
@@ -65,11 +80,16 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 	defer f.Close()
-	var cfg Config
 	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&cfg)
+	err = decoder.Decode(&cfgYaml)
 	if err != nil {
 		return nil, err
 	}
+
+	cfg := Config{
+		ConfigYaml: cfgYaml,
+		ConfigEnv:  cfgEnv,
+	}
+
 	return &cfg, nil
 }
