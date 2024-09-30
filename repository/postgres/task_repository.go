@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 import (
 	"database/sql"
@@ -17,10 +17,10 @@ func NewPostgresTaskRepo(db *sql.DB) *PostgresTaskRepo {
 	}
 }
 
-func (repo *PostgresTaskRepo) GetAllTasks(page int, limit int) (*[]models.Task, error) {
+func (repo *PostgresTaskRepo) GetAllTasks(req models.PaginationRequest) (*[]models.Task, error) {
 	var tasks []models.Task
-	offset := (limit * page) - limit
-	rows, err := repo.DB.Query("SELECT FROM * tasks ORDER BY ID LIMIT $1 OFFSET $2", limit, offset)
+	offset := (req.Limit * req.Page) - req.Limit
+	rows, err := repo.DB.Query("SELECT FROM * tasks ORDER BY ID LIMIT $1 OFFSET $2", req.Limit, offset)
 	if err != nil {
 		return nil, e.WrapError("query get all tasks failed", err)
 	}
@@ -52,12 +52,16 @@ func (repo *PostgresTaskRepo) GetRowsCount() (int, error) {
 	return total, nil
 }
 
-func (repo *PostgresTaskRepo) CreateTask(task *models.Task) error {
-	_, err := repo.DB.Exec("INSERT INTO tasks(user_id, title, description) VALUES($1, $2, $3)", task.UserId, task.Title, task.Description)
+func (repo *PostgresTaskRepo) CreateTask(task *models.Task) (int, error) {
+	var id int
+	res := repo.DB.QueryRow("INSERT INTO tasks(user_id, title, description) VALUES($1, $2, $3) RETURNING id", task.UserId, task.Title, task.Description)
+	//return id for response
+	err := res.Scan(&id)
 	if err != nil {
-		return e.WrapError("failed to create task", err)
+		return -1, e.WrapError("failed to create task", err)
 	}
-	return nil
+
+	return id, nil
 }
 
 func (repo *PostgresTaskRepo) UpdateTask(task *models.Task) error {
