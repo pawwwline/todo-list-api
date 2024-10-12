@@ -1,0 +1,9 @@
+# Ignore coverage files
+
+.idea
+
+# Ignore config files
+config_files
+
+# Ignore env var file
+.env
