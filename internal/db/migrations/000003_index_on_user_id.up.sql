@@ -1,1 +1,1 @@
-CREATE INDEX ON idx_user_id ON tasks(user_id);
+CREATE INDEX idx_user_id ON tasks(user_id);
