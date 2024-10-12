@@ -1,6 +1,15 @@
 package e
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var (
+	UniqueViolationErr    = errors.New("value already exist in db")
+	AuthorizationMissing  = errors.New("authorization header is missing")
+	InvalidCredentialsErr = errors.New("invalid email or password")
+)
 
 func WrapError(message string, err error) error {
 	if err != nil {
