@@ -6,3 +6,9 @@ type Response struct {
 	Total int    `json:"total"`
 	Limit int    `json:"limit"`
 }
+
+type PaginationRequest struct {
+	UserId int
+	Page   int
+	Limit  int
+}
