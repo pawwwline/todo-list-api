@@ -3,7 +3,7 @@ package repository
 import "todo-list-api/models"
 
 type TaskRepository interface {
-	GetAllTasks(req models.PaginationRequest) (*[]models.Task, error)
+	GetAllTasks(req models.PaginationRequest) ([]models.Task, error)
 	GetRowsCount(userId int) (int, error)
 	CreateTask(task *models.Task) (int, error)
 	UpdateTask(task *models.Task) error
