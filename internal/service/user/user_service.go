@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"todo-list-api/internal/logger"
 	"todo-list-api/internal/repository"
 	"todo-list-api/internal/service/auth"
 	"todo-list-api/internal/service/utils"
@@ -44,6 +45,7 @@ func (us *UserService) SignUp(reqUser models.User) (string, error) {
 		}
 		return "", err
 	}
+	logger.Logger.Debug("user created with id", "id", id)
 
 	token, err := auth.CreateToken(us.jwtSecret, int(id))
 	if err != nil {
