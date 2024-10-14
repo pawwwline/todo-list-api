@@ -7,3 +7,4 @@ config_files
 
 # Ignore env var file
 .env
+.db.env
