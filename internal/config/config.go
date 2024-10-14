@@ -71,6 +71,8 @@ func LoadConfig() (*Config, error) {
 		configPath = filepath.Join(configPath, "config.local.yaml")
 	case "test":
 		configPath = filepath.Join(configPath, "config.test.yaml")
+	case "prod":
+		configPath = filepath.Join(configPath, "config.prod.yaml")
 	default:
 		return nil, errors.New("environment not supported")
 	}
