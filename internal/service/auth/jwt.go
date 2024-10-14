@@ -2,10 +2,12 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
+	"todo-list-api/internal/logger"
 	"todo-list-api/lib/e"
 
 	"github.com/dgrijalva/jwt-go"
@@ -23,6 +25,9 @@ func NewAuthService(jwtSecret string) *AuthService {
 
 func CreateToken(jwtSecret string, userId int) (string, error) {
 	//token need to be refreshed after 48 hours
+	if userId == 0 {
+		return "", errors.New("user id is 0")
+	}
 	JwtPayload := jwt.MapClaims{
 		"sub": userId,
 		"exp": time.Now().Add(48 * time.Hour).Unix(),
@@ -40,15 +45,16 @@ func GetTokenString(r *http.Request) (string, error) {
 	if reqToken == "" {
 		return "", e.AuthorizationMissing
 	}
-	splitToken := strings.Split(reqToken, "Bearer")
-	if len(splitToken) != 2 {
+	if !strings.HasPrefix(reqToken, "Bearer ") {
 		return "", e.AuthorizationMissing
 	}
-	reqToken = strings.TrimSpace(splitToken[1])
+	reqToken = strings.TrimSpace(strings.TrimPrefix(reqToken, "Bearer "))
 	return reqToken, nil
 }
 
-func ValidateToken(jwtSecret, reqToken string) (*jwt.Token, error) {
+func ValidateToken(reqToken, jwtSecret string) (*jwt.Token, error) {
+	logger.Logger.Debug("jwt secret for valid token", "secret", jwtSecret)
+	logger.Logger.Debug("reqToken", "string", reqToken)
 	token, err := jwt.Parse(reqToken, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -57,7 +63,7 @@ func ValidateToken(jwtSecret, reqToken string) (*jwt.Token, error) {
 		return []byte(jwtSecret), nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing token: %v", err)
 	}
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
@@ -68,14 +74,16 @@ func ValidateToken(jwtSecret, reqToken string) (*jwt.Token, error) {
 
 func GetUserIdToken(token *jwt.Token) (int, error) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		userId := claims["sub"].(int)
-		if !ok {
-			return -1, fmt.Errorf("error getting user_id from jwt")
+		if userId, exists := claims["sub"]; exists {
+			if id, ok := userId.(float64); ok {
+				logger.Logger.Debug("user id", "id", id)
+				return int(id), nil
+			}
+			return 0, fmt.Errorf("error converting user_id to int")
 		}
-		return userId, nil
+		return 0, fmt.Errorf("user_id not found in claims")
 	}
-	return -1, fmt.Errorf("error getting user_id from jwt")
-
+	return 0, fmt.Errorf("invalid token")
 }
 
 func GetUserCtx(ctx context.Context) (int, error) {
