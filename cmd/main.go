@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"todo-list-api/internal/config"
@@ -16,19 +17,23 @@ import (
 
 func main() {
 	c, err := config.LoadConfig()
-	l.SetupLogger(c.ConfigYaml.Env)
+	if err != nil {
+		log.Fatalf("error getting config: %v", err)
+		return
+	}
+	logger, err := l.SetupLogger(c.ConfigYaml.Env)
 	if err != nil {
 		l.Logger.Error("error reading config file", "can't read config file", err)
 		os.Exit(1)
 
 	}
-	l.Logger.Info("successfully loaded config", "env", c.ConfigYaml.Env)
+	logger.Info("successfully loaded config", "env", c.ConfigYaml.Env)
 	db, err := db.ConnectDB(c.ConfigYaml.Database)
 	if err != nil {
-		l.Logger.Error("error connecting to database", "error", err)
+		logger.Error("error connecting to database", "error", err)
 		os.Exit(1)
 	}
-	l.Logger.Info("successfully connected to database", "db_name", c.ConfigYaml.Database.Name)
+	logger.Info("successfully connected to database", "db_name", c.ConfigYaml.Database.Name)
 
 	rep := postgres.NewPostgresRepo(db)
 	taskService := task.NewTaskService(rep)
@@ -41,16 +46,16 @@ func main() {
 		middleware.TokenAuthMiddleware(c.ConfigEnv.SecretJWT),
 	)
 	server := &http.Server{
-		Addr:         c.ConfigYaml.Server.Host + ":" + c.ConfigYaml.Server.Port,
+		Addr:         "0.0.0.0" + ":" + c.ConfigYaml.Server.Port,
 		Handler:      stack(router),
 		ReadTimeout:  c.ConfigYaml.Server.Timeout,
 		WriteTimeout: c.ConfigYaml.Server.Timeout,
 		IdleTimeout:  c.ConfigYaml.Server.IdleTimeout,
 	}
-	l.Logger.Info("connecting server", "address", server.Addr)
+	logger.Info("connecting server", "address", server.Addr)
 	err = server.ListenAndServe()
 	if err != nil {
-		l.Logger.Error("error running server", "error", err)
+		logger.Error("error running server", "error", err)
 	}
 
 }
