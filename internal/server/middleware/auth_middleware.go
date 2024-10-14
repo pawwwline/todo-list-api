@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"todo-list-api/internal/logger"
 	"todo-list-api/internal/service/auth"
 )
 
@@ -18,9 +19,11 @@ func TokenAuth(next http.Handler, jwtSecret string) http.Handler {
 				http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
 				return
 			}
+			logger.Logger.Debug("jwt string from req", "jwt", tokenStr)
 			tokenJWT, err := auth.ValidateToken(tokenStr, jwtSecret)
 			if err != nil {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+				logger.Logger.Error("token error", "error", err)
 				return
 			}
 			userId, err := auth.GetUserIdToken(tokenJWT)

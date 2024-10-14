@@ -50,11 +50,17 @@ func (us *UserServer) SignupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := us.Service.SignUp(user)
 	if err != nil {
-		if errors.Is(err, e.InvalidCredentialsErr) {
-			http.Error(w, "Invalid password or email", http.StatusUnauthorized)
+		if errors.Is(err, e.UniqueViolationErr) {
+			http.Error(w, "user with this email already exists", http.StatusConflict)
+			logger.Logger.Error("error creating token", "error", err)
+			return
+		} else {
+			http.Error(w, "error creating token", http.StatusInternalServerError)
+			logger.Logger.Error("error creating token", "error", err)
 			return
 		}
 	}
+	logger.Logger.Debug("token string", "token", token)
 	utils.WriteJSON(w, http.StatusOK, map[string]string{"token": token})
 
 }

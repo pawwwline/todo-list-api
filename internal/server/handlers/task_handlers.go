@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
+	"todo-list-api/internal/logger"
 	"todo-list-api/internal/service/task"
 	"todo-list-api/internal/service/utils"
+	"todo-list-api/lib/e"
 	"todo-list-api/models"
 )
 
@@ -22,6 +25,7 @@ func NewTaskServer(service task.TaskService) *TaskServer {
 func (ts *TaskServer) CreateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task models.Task
 	userId, err := utils.UserIdfromCtx(r.Context())
+	logger.Logger.Debug("user id from ctx", "id", userId)
 	if err := utils.ParseJson(r, &task); err != nil {
 		http.Error(w, "Invalid request format", http.StatusBadRequest)
 		return
@@ -42,10 +46,22 @@ func (ts *TaskServer) CreateTaskHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (ts *TaskServer) GetAllTasksHandler(w http.ResponseWriter, r *http.Request) {
-	paginationReq := utils.PaginationRequest(w, r)
+	paginationReq, err := utils.PaginationRequest(w, r)
+	if err != nil {
+		logger.Logger.Error("failed to parse pagination request", "error", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	logger.Logger.Debug("pagination req", "limit", paginationReq.Limit, "page", paginationReq.Page, "userId", paginationReq.UserId)
 	response, err := ts.Service.GetTasks(paginationReq)
+	if err != nil {
+		logger.Logger.Error("failed to get tasks", "error", err)
+		http.Error(w, "error creating task", http.StatusInternalServerError)
+		return
+	}
 	err = utils.WriteJSON(w, http.StatusOK, response)
 	if err != nil {
+		logger.Logger.Error("failed to write JSON response", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -59,7 +75,16 @@ func (ts *TaskServer) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
-	ts.Service.DeleteTask(id, userId)
+	err = ts.Service.DeleteTask(id, userId)
+	if err != nil {
+		if errors.Is(e.ItemIdNotFound, err) {
+			http.Error(w, "task id not found", http.StatusNotFound)
+			return
+		} else {
+			http.Error(w, "error deleting task", http.StatusInternalServerError)
+			return
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -78,5 +103,15 @@ func (ts *TaskServer) UpdateTaskHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	task.UserId = userId
 	response, err := ts.Service.UpdateTask(id, task)
+	if err != nil {
+		if errors.Is(e.ItemIdNotFound, err) {
+			http.Error(w, "task id not found", http.StatusNotFound)
+			return
+		} else {
+			http.Error(w, "error deleting task", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	utils.WriteJSON(w, http.StatusOK, response)
 }
